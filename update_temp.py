@@ -23,10 +23,10 @@ def push():
 
     tiantu = model.Express_by_Tiantu()
     tiantu.push_update(item)
-    print('推送单号信息')
+    print(datetime.datetime.now(),'推送单号信息')
 
 
-push()
+
 #
 # scheduler = BlockingScheduler()
 # scheduler.add_job(func=update, trigger='interval', seconds=60)

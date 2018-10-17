@@ -1,7 +1,7 @@
 # coding=utf-8
 import datetime
 import time
-
+import random
 import requests
 import model
 import config
@@ -11,15 +11,18 @@ import sys
 import re
 import log
 import update_temp
-
-# import update_temp
+import api as api_choose
 
 switch = True
 log = log.Log()
 
+api_list = [api_choose.baidu, api_choose.kuaidi100]
+
 
 def get_proxies():
-    # 代理服务器
+    """
+    :return: 阿布云HTTP代理隧道
+    """
     proxyHost = config.proxyHost
     proxyPort = config.proxyPort
     proxyUser = config.proxyUser
@@ -37,105 +40,56 @@ def get_proxies():
     return proxies
 
 
-def get_url(q):
-    # 要访问的目标页面
-    targetUrl = "http://www.kuaidi100.com/query?type={}&postid={}"
+def get_target(q):
+    """
+    :param q: 获取的记录数
+    :return: 随机获取 q 条快递记录，[('#快递单号','#快递公司'),('#快递单号','#快递公司')]
+    """
     db = model.Express_by_MS()
     item = db.get_unfinished_random(q)
-
-    urls = []
-
+    targets = []
     for i in item:
-        url = targetUrl.format(i[2], i[1])
-        urls.append(url)
-    return urls
+        targets.append((i[1], i[2]))
+    return targets
 
 
-# def save_result(update_time, took_time, confirm_time, last_time, state, item_tag, results, express_order, details):
-#     conn = psycopg2.connect(database=PG_DATABASE, user=PG_USERNAME, password=PG_PASSWORD, host=PG_HOST,
-#                             port=PG_PORT)
-#     cursor = conn.cursor()
-#
-#     SQL = """UPDATE express SET update_time={}, took_time={},confirm_time={},last_time={},state={},item_tag={},results={}
-#                     WHERE express_order='{}';""".format(update_time, took_time, confirm_time, last_time, state,
-#                                                         item_tag,
-#                                                         results,
-#                                                         express_order)
-#     cursor.execute(SQL)
-#
-#     for i in range(len(details)):
-#         node_id = express_order + "[" + str(i) + "]"
-#
-#         SQL = "select node_id from express_details WHERE node_id='{}'".format(node_id)
-#         # print(SQL)
-#         cursor.execute(SQL)
-#         res = cursor.fetchone()
-#         if not res:
-#             SQL = "INSERT INTO express_details (express_order, node_date,node_content,node_id) VALUES ('{}','{}','{}','{}')".format(
-#                 express_order, details[i]['time'], details[i]['context'], node_id)
-#             # print(SQL)
-#             cursor.execute(SQL)
-#
-#     conn.commit()
-#     cursor.close()
-#     conn.close()
+def parsing(api, target, proxies):
+    """
+    :param api:调用的api，从全局的api_list中随机选取
+    :param target:元组：(#快递单号,#快递公司)
+    :param proxies:指定代理,传入 0 不使用代理
+    :return:返回查询结果
+    """
+    if proxies == 0:
+        return api(target, 0)
+    else:
+        return api(target, proxies)
 
 
 def main(i):
     proxies = get_proxies()
-    urls = get_url(i)
+    proxies = 0
+    api = random.choice(api_list)
+    targets = get_target(i)  # 获取i个单号
 
-    if not urls:
-        log.critical('已无信息需要爬取')
+    if not targets:
+        log.critical('已无信息需要爬取,循环终止')
         global switch
         switch = False
 
-    for url in urls:
-        resp = requests.get(url)
-        # resp = requests.get(url, proxies=get_proxies())
+    for i in targets:
+        item = parsing(api, i, proxies)
 
-        express_order = re.findall("\d+", re.search('postid=.*', url).group())[0]
+        db = model.Express_by_MS()
+        db.save_result(item)
 
-        if resp.status_code == 200:
-            result = json.loads(resp.text)
-            item = {}
-            item['request_flag'] = result['message']
-            item['update_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            item['Has_Signed'] = 0
-            item['Synchronous'] = 1
-
-            if item['request_flag'] == 'ok':
-                item['Process_Status'] = 1
-                item['Express_Status'] = result['state']
-                item['Express_No'] = result.get('nu', '')
-                item['Express_Company'] = result.get('com', '')
-                item['content'] = result.get('data', '')[::-1]
-                item['latest_content'] = result.get('data', [{"time": "Null", "context": ""}])[0]['context']
-                item['latest_tiem'] = result.get('data', [{"time": "Null", "context": ""}])[0]['time']
-                if item['Express_Status'] == '3':
-                    item['Has_Signed'] = 1
-                    item['Process_Status'] = 2
-
-
-            elif item['request_flag'] == '快递公司参数异常：单号不存在或者已经过期':
-                item['Express_Status'] = result['state']
-                item['results'] = '快递公司参数异常：单号不存在或者已经过期'
-                item['Express_No'] = express_order
-                item['Process_Status'] = 1
-
-            db = model.Express_by_MS()
-            db.save_result(item)
-
-            log.info('抓取单号信息完成:' + str(express_order))
-            time.sleep(1)
-
-        else:
-            log.error('请求失败，状态码：', resp.status_code)
+        log.info('通过【' + api.__name__ + '】抓取单号完成=>' + str(i[0]))
+        time.sleep(1)
 
 
 if __name__ == '__main__':
 
-    c = 0
+    # c = 0
 
     update_temp.update()
 
@@ -144,16 +98,11 @@ if __name__ == '__main__':
         db = model.Express_by_MS()
         db.init_get_unfinished_random()
 
-        c += 1
-
-        if c > 10:
-            update_temp.update()
-            update_temp.push()
-            c = 0
+        # c += 1
 
         my_thread = []
 
-        thread_count = 2  # 调用 thread_count 个线程
+        thread_count = 4  # 调用 thread_count 个线程
         parse = 5  # 一个线程解析 parse 个url
 
         for i in range(thread_count):
@@ -168,4 +117,7 @@ if __name__ == '__main__':
             my_thread[i].join()
             time.sleep(1)
 
-        time.sleep(10)
+        time.sleep(6)
+
+        update_temp.update()
+        update_temp.push()

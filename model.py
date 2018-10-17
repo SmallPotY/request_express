@@ -11,19 +11,15 @@ class Express_by_Tiantu:
                                     user=DB_token['tiantu']['MS_user'], password=DB_token['tiantu']['MS_password'],
                                     database=DB_token['tiantu']['MS_database'], charset='UTF-8')
 
-
-    def push_update(self,item):
+    def push_update(self, item):
         # print(item)
-
         cursor = self.conn.cursor()
-
-        sql= "INSERT INTO Express_Trace_Temp (Express_No,Express_Company,Express_Status,Has_Signed,Trace_Context,Trace_Date_Time) VALUES {}".format(item)
+        sql = "INSERT INTO Express_Trace_Temp (Express_No,Express_Company,Express_Status,Has_Signed,Trace_Context,Trace_Date_Time,Process_Status) VALUES {}".format(
+            item)
         # print(sql)
         cursor.execute(sql)
         self.conn.commit()
         self.conn.close()
-
-
 
 
 class Express_by_MS:
@@ -71,11 +67,13 @@ class Express_by_MS:
         rows = cursor.fetchall()
         result = [i for i in rows]
         conditions = tuple([i[0] for i in rows])
-
-        sql = "UPDATE express SET query_ongoing=1 WHERE id in {}".format(conditions)
-        # print(sql)
-        cursor.execute(sql)
-        self.conn.commit()
+        if conditions:
+            if len(conditions) < 2:
+                sql = "UPDATE express SET query_ongoing=1 WHERE id = {}".format(conditions[0])
+            else:
+                sql = "UPDATE express SET query_ongoing=1 WHERE id in {}".format(conditions)
+            cursor.execute(sql)
+            self.conn.commit()
         self.conn.close()
         return result
 
@@ -135,8 +133,6 @@ class Express_by_MS:
         self.conn.commit()
         self.conn.close()
 
-
-
     def get_push(self):
         cursor = self.conn.cursor()
         sql = """
@@ -147,16 +143,14 @@ class Express_by_MS:
                 """
         cursor.execute(sql)
         rows = cursor.fetchall()
-        result = [str((i[0],i[1],i[2],i[3],i[4],i[5].strftime('%Y-%m-%d %H:%M:%S'))) for i in rows]
+        result = [str((i[0], i[1], i[2], i[3], i[4], i[5].strftime('%Y-%m-%d %H:%M:%S'), '0')) for i in rows]
         # print(result)
-        result =','.join([str(i) for i in result])
+        result = ','.join([str(i) for i in result])
 
         self.conn.commit()
         self.conn.close()
         return result
 
+
 if __name__ == '__main__':
     db = Express_by_MS()
-    n = db.get_push()
-
-    print(n)

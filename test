@@ -1,0 +1,92 @@
+# -*- coding:utf-8 -*-
+
+
+with open('content.txt', 'r', encoding='utf-8') as f:
+    content = []
+    for line in f:
+        line = line.strip('\n')
+        content.append(line)
+
+
+
+def judge_phase(content):
+    guess = []
+
+    key_state = {
+        '打包': '途中',
+        '发出': '途中',
+        '收入': '途中',
+        '发往': '途中',
+        '到达': '途中',
+        '到件扫描': '途中',
+        '称重扫描': '途中',
+        '进行分拨': '途中',
+        '【反馈】扫描': '途中',
+        '离开': '途中',
+        '卸车扫描': '途中',
+        '【称重】扫描': '途中',
+        '【到件】扫描': '途中',
+        '【卸车】扫描': '途中',
+        '【分发】扫描': '途中',
+        '快件扫描': '途中',
+        '已拆包': '途中',
+        '已收寄': '途中',
+        '签收': '签收',
+        '代收': '签收',
+        '为您服务': '签收',
+        '派件': '派件',
+        '【派送】扫描': '派件',
+        '收件': '揽收',
+        '揽收': '揽收',
+        '揽件扫描': '揽收',
+        '问题件':'问题件'
+    }
+
+
+    for k,v in key_state.items():
+        if k in content:
+            guess.append(v)
+
+
+    result = set(guess)
+    situation = len(result)
+
+    if situation==1:
+        # log.debug('成功')
+        return (1,guess[0])
+
+    if situation>1:
+
+        if '代收' in content and '取件' in content:
+            # log.debug('歧义，解析为签收')
+            return (1, '签收')
+        if '途中' in guess and '收件' in guess:
+            # log.debug('歧义，解析为途中')
+            return (1, '途中')
+        if '途中' in guess and '签收' in guess:
+            # log.debug('歧义，解析为签收')
+            return (1, '签收')
+
+        if '已被' in guess and '代签收' in content:
+            # log.debug('歧义，解析为签收')
+            return (1, '签收')
+
+
+        if '派件' in content and '代收' in content:
+            # log.debug('歧义，解析为代收')
+            return (1, '代收')
+
+        if '正在进行扫描' in content:
+            # log.debug('歧义，解析为代收')
+            return (1, '途中')
+
+        # log.debug('歧义,分析失败')
+        return (2,','.join(result),content)
+    if situation==0:
+        # log.debug('没有对应关键字')
+        return (0,content)
+
+for i in content:
+    n = judge_phase(i)
+    print(n[1])
+

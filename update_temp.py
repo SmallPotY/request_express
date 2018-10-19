@@ -11,9 +11,9 @@ import datetime
 # print(datetime.datetime.now(), "更新快递查询池")
 
 
-def update():
+def update(q):
     db = model.Express_by_MS()
-    db.get_temp_express()
+    db.get_temp_express(q)
     print(datetime.datetime.now(), "更新快递查询池")
 
 

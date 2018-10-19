@@ -9,14 +9,18 @@ import json
 import threading
 import sys
 import re
-import log
+from log import MyLog
 import update_temp
 import api as api_choose
 
 switch = True
-log = log.Log()
+log = MyLog()
 
-api_list = [api_choose.baidu, api_choose.kuaidi100]
+
+
+api_list = [api_choose.baidu, api_choose.kuaidi100,api_choose.ckd8]
+
+get_temp = 100  # 每次从临时表提取记录数
 
 
 def get_proxies():
@@ -68,7 +72,7 @@ def parsing(api, target, proxies):
 
 def main(i):
     proxies = get_proxies()
-    proxies = 0
+    # proxies = 0
     api = random.choice(api_list)
     targets = get_target(i)  # 获取i个单号
 
@@ -91,7 +95,7 @@ if __name__ == '__main__':
 
     # c = 0
 
-    update_temp.update()
+    update_temp.update(get_temp)
 
     while switch:
 
@@ -102,8 +106,8 @@ if __name__ == '__main__':
 
         my_thread = []
 
-        thread_count = 4  # 调用 thread_count 个线程
-        parse = 5  # 一个线程解析 parse 个url
+        thread_count =4  # 调用 thread_count 个线程
+        parse = 10  # 一个线程解析 parse 个url
 
         for i in range(thread_count):
             t = threading.Thread(target=main, args=(parse,))
@@ -117,7 +121,9 @@ if __name__ == '__main__':
             my_thread[i].join()
             time.sleep(1)
 
-        time.sleep(6)
+        time.sleep(3)
 
-        update_temp.update()
+        update_temp.update(get_temp)
         update_temp.push()
+
+        time.sleep(3)

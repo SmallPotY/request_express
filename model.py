@@ -2,6 +2,9 @@
 import pymssql
 import datetime
 from config import DB_token
+import helper
+from main import log
+
 
 
 class Express_by_Tiantu:
@@ -17,7 +20,10 @@ class Express_by_Tiantu:
         sql = "INSERT INTO Express_Trace_Temp (Express_No,Express_Company,Express_Status,Has_Signed,Trace_Context,Trace_Date_Time,Process_Status) VALUES {}".format(
             item)
         # print(sql)
-        cursor.execute(sql)
+        try:
+            cursor.execute(sql)
+        except:
+            log.error('执行SQL错误,代号[push_update_001],错误语句：' + str(sql))
         self.conn.commit()
         self.conn.close()
 
@@ -29,18 +35,24 @@ class Express_by_MS:
                                     user=DB_token['MSSQL']['MS_user'], password=DB_token['MSSQL']['MS_password'],
                                     database=DB_token['MSSQL']['MS_database'], charset='UTF-8')
 
-    def get_temp_express(self):
+    def get_temp_express(self, q):
         """
         将临时表中的快递单号存入查询表中
         :return:
         """
         cursor = self.conn.cursor()
         sql = """
-            SELECT Express_No,Express_Company FROM express_temp WHERE Process_Status=0
-            UPDATE express_temp SET Process_Status=1
-            """
+            SELECT TOP {} Express_No,Express_Company,id FROM express_temp WHERE Process_Status=0
+            """.format(q)
         cursor.execute(sql)
         rows = cursor.fetchall()
+        conditions = tuple(i[2] for i in rows)
+        if conditions:
+            if len(conditions) < 2:
+                sql = "UPDATE express_temp SET Process_Status=1 WHERE id = {}".format(conditions[0])
+            else:
+                sql = "UPDATE express_temp SET Process_Status=1 WHERE id in {}".format(conditions)
+            cursor.execute(sql)
         self.conn.commit()
 
         for i in rows:
@@ -94,13 +106,13 @@ class Express_by_MS:
 
         cursor = self.conn.cursor()
 
-        Process_Status = item.get('Process_Status')  # 查询标识
-        Express_Status = item.get('Express_Status')  # 快递状态
-        Has_Signed = item.get('Has_Signed')  # 是否签收
-        update_time = item.get('update_time')  # 更新时间
+        Process_Status = item.get('Process_Status',-1)  # 查询标识
+        Express_Status = item.get('Express_Status',-1)  # 快递状态
+        Has_Signed = item.get('Has_Signed',-1)  # 是否签收
+        update_time = item.get('update_time','1999-01-01 0:00:00')  # 更新时间
         request_flag = item.get('request_flag')  # 请求结果
         latest_content = item.get('latest_content')  # 最后状态
-        latest_tiem = item.get('latest_tiem')  # 最后时间
+        latest_tiem = item.get('latest_tiem','1999-01-01 0:00:00')  # 最后时间
         Express_No = item.get('Express_No')  # 单号
 
         sql = """
@@ -112,23 +124,37 @@ class Express_by_MS:
                    latest_tiem=latest_tiem, Express_No=Express_No)
 
         # print(sql)
-        cursor.execute(sql)
+        try:
+            cursor.execute(sql)
+        except:
+            log.error('执行SQL错误,代号[001],传入item：' + str(item) + '[SQL]:'+sql)
 
         sql = "UPDATE express_temp SET Process_Status=2 WHERE Express_No='{}'".format(Express_No)
-        cursor.execute(sql)
+        try:
+            cursor.execute(sql)
+        except:
+            log.error('执行SQL错误,代号[002],传入item：' + str(item))
 
-        for i in range(len(item.get('content'))):
-            trace_flag = Express_No + "-[" + str(i) + "]"
-
-            SQL = "select Trace_flag from express_info WHERE Trace_flag='{}'".format(trace_flag)
-            # print(SQL)
-            cursor.execute(SQL)
-            res = cursor.fetchone()
-            if not res:
-                SQL = "INSERT INTO express_info (Express_No, Trace_Context,Trace_Date_Time,Trace_flag,Trace_serial) VALUES ('{}','{}','{}','{}','{}')".format(
-                    Express_No, item['content'][i]['context'], item['content'][i]['time'], trace_flag, i)
-                # print(SQL)
-                cursor.execute(SQL)
+        if item.get('content'):
+            for i in range(len(item.get('content'))):
+                trace_flag = Express_No + "-[" + str(i) + "]"
+                sql = "select Trace_flag from express_info WHERE Trace_flag='{}'".format(trace_flag)
+                cursor.execute(sql)
+                res = cursor.fetchone()
+                if not res:
+                    phase = '未知'
+                    t = helper.judge_phase(item['content'][i]['context'])
+                    if t[0]:
+                        if t[0] ==1 :
+                            phase = t[1]
+                        else:
+                            phase = '，'.join(t[1])
+                    sql = "INSERT INTO express_info (Express_No, Trace_Context,Trace_Date_Time,Trace_flag,Trace_serial,Trace_Phase) VALUES ('{}','{}','{}','{}','{}','{}')".format(
+                        Express_No, item['content'][i]['context'], item['content'][i]['time'], trace_flag, i,phase)
+                    try:
+                        cursor.execute(sql)
+                    except:
+                        log.error('执行SQL错误,代号[003],传入item：' + str(item))
 
         self.conn.commit()
         self.conn.close()
@@ -154,3 +180,5 @@ class Express_by_MS:
 
 if __name__ == '__main__':
     db = Express_by_MS()
+
+    db.conn.commit()

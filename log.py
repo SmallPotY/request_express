@@ -1,37 +1,61 @@
 # coding=utf-8
-import logging  # 引入logging模块
+
+import logging
+import getpass
+import sys
 
 
-class Log:
-
+# 定义Mylog类，管理log信息
+class MyLog:
     def __init__(self):
-        # 第一步，创建一个logger
-        self.logger = logging.getLogger()
-        self.logger.setLevel(logging.INFO)  # Log等级总开关
-        # 第二步，创建一个handler，用于写入日志文件
-        logfile = 'log.txt'
-        fh = logging.FileHandler(logfile, mode='a')
-        fh.setLevel(logging.DEBUG)  # 输出到file的log等级的开关
+        self.user = getpass.getuser()
+        self.logger = logging.getLogger(self.user)
+        self.logger.setLevel(logging.DEBUG)
+
+        # 日志文件名
+        self.logFile = sys.argv[0][0:-3] + '.log'
         logging.basicConfig(level=logging.DEBUG,
-                            format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')  # logging.basicConfig函数对日志的输出格式及方式做相关配置
-        # 第三步，定义handler的输出格式
-        formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
-        fh.setFormatter(formatter)
+                            format='%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s')
+        self.formatter = logging.Formatter("%(asctime)s - %(filename)s[line:%(lineno)d] - %(levelname)s: %(message)s")
 
-        # 第四步，将logger添加到handler里面
-        self.logger.addHandler(fh)
+        # 日志显示到屏幕并输出到文档
+        self.logHand = logging.FileHandler(self.logFile, encoding='utf-8')
+        self.logHand.setFormatter(self.formatter)
+        self.logHand.setLevel(logging.DEBUG)
 
-    def debug(self, content):
-        self.logger.debug(content)
+        self.logHandSt = logging.StreamHandler()
+        self.logHandSt.setFormatter(self.formatter)
+        self.logHandSt.setLevel(logging.DEBUG)
 
-    def info(self, content):
-        self.logger.info(content)
+        self.logger.addHandler(self.logHand)
+        self.logger.addHandler(self.logHandSt)
 
-    def warning(self, content):
-        self.logger.warning(content)
+        #  用pop方法把logger.handlers列表中的handler移除，解决多模块引用重复输出的问题，注意如果你add了多个handler，这里需多次pop，或者可以直接为handlers列表赋空值
+        self.logger.handlers.pop()
+        # self.logger.handler = []
 
-    def error(self, content):
-        self.logger.error(content)
+    # 日志的5个级别对应5个函数
+    def debug(self, msg):
+        self.logger.debug(msg)
 
-    def critical(self, content):
-        self.logger.critical(content)
+    def info(self, msg):
+        self.logger.info(msg)
+
+    def warn(self, msg):
+        self.logger.warn(msg)
+
+    def error(self, msg):
+        self.logger.error(msg)
+
+    def critical(self, msg):
+        self.logger.critical(msg)
+
+
+# 测试代码 __name__是访问当前函数名的方法，如果作为模块就不是main函数 下面的方法不会执行
+if __name__ == '__main__':
+    mylog = MyLog()
+    mylog.debug("fffff")
+    mylog.info("I;m info")
+    mylog.warn("warning")
+    mylog.error("Error")
+    mylog.critical("this is a critical")

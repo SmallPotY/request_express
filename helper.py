@@ -1,11 +1,8 @@
-# -*- coding:utf-8 -*-
+# coding=utf-8
 
 
-with open('content.txt', 'r', encoding='utf-8') as f:
-    content = []
-    for line in f:
-        line = line.strip('\n')
-        content.append(line)
+from main import log
+import model
 
 
 
@@ -39,54 +36,58 @@ def judge_phase(content):
         '收件': '揽收',
         '揽收': '揽收',
         '揽件扫描': '揽收',
-        '问题件':'问题件'
+        '问题件': '问题件'
     }
 
-
-    for k,v in key_state.items():
+    for k, v in key_state.items():
         if k in content:
             guess.append(v)
-
 
     result = set(guess)
     situation = len(result)
 
-    if situation==1:
-        # log.debug('成功')
-        return (1,guess[0])
+    if situation == 1:
+        log.debug('成功=>' + content + '=>' + guess[0])
+        return (1, guess[0])
 
-    if situation>1:
+    if situation > 1:
 
         if '代收' in content and '取件' in content:
-            # log.debug('歧义，解析为签收')
+            log.debug('歧义=>' + content + '=>' + '签收')
             return (1, '签收')
         if '途中' in guess and '收件' in guess:
-            # log.debug('歧义，解析为途中')
+            log.debug('歧义=>' + content + '=>' + '途中')
             return (1, '途中')
         if '途中' in guess and '签收' in guess:
-            # log.debug('歧义，解析为签收')
+            log.debug('歧义=>' + content + '=>' + '签收')
             return (1, '签收')
-
         if '已被' in guess and '代签收' in content:
-            # log.debug('歧义，解析为签收')
+            log.debug('歧义=>' + content + '=>' + '签收')
             return (1, '签收')
-
-
         if '派件' in content and '代收' in content:
-            # log.debug('歧义，解析为代收')
+            log.debug('歧义=>' + content + '=>' + '代收')
             return (1, '代收')
 
         if '正在进行扫描' in content:
-            # log.debug('歧义，解析为代收')
+            log.debug('歧义=>' + content + '=>' + '途中')
             return (1, '途中')
 
-        # log.debug('歧义,分析失败')
-        return (2,','.join(result),content)
-    if situation==0:
-        # log.debug('没有对应关键字')
-        return (0,content)
+        log.debug('歧义=>分析失败=>' + content + '=>' + ','.join(result))
+        return (2, result, content)
+    if situation == 0:
+        log.debug('失败=>' + content)
+        return (0, content)
 
-for i in content:
-    n = judge_phase(i)
-    print(n[1])
+
+
+def manual_check_judge_phase(type):
+    """
+    手动更新状态
+    :param type:全部更新或只更新未知部分
+    :return:
+    """
+
+
+    db = model.Express_by_MS()
+
 

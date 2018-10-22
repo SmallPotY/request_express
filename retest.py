@@ -1,8 +1,10 @@
-# coding=utf-8
+import pymssql
+import threading
+import time
+from config import DB_token
+from log import MyLog
 
-
-from main import log
-import model
+log = MyLog()
 
 
 def judge_phase(content):
@@ -36,10 +38,7 @@ def judge_phase(content):
         '揽收': '揽收',
         '揽件': '揽收',
         '揽件扫描': '揽收',
-        '问题件': '问题件',
-        '开始配送': '派件',
-        '等待配送': '途中',
-        '正在投递':'派件',
+        '问题件': '问题件'
     }
 
     for k, v in key_state.items():
@@ -54,14 +53,7 @@ def judge_phase(content):
         return (1, guess[0])
 
     if situation > 1:
-        if '问题件' in guess:
-            log.debug('歧义=>' + content + '=>' + '问题件')
-            return (1, '问题件')
-
-        if '已揽件' in content or '已揽收' in content:
-            log.debug('歧义=>' + content + '=>' + '揽收')
-            return (1, '揽收')
-        if '已签收' in content or '签收人' in content:
+        if '已签收' in content:
             log.debug('歧义=>' + content + '=>' + '签收')
             return (1, '签收')
         if '代收' in content and '取件' in content:
@@ -77,36 +69,79 @@ def judge_phase(content):
             log.debug('歧义=>' + content + '=>' + '签收')
             return (1, '签收')
         if '派件' in content and '代收' in content:
-            log.debug('歧义=>' + content + '=>' + '签收')
-            return (1, '签收')
+            log.debug('歧义=>' + content + '=>' + '代收')
+            return (1, '代收')
 
-        if '进行扫描' in content:
+        if '正在进行扫描' in content:
             log.debug('歧义=>' + content + '=>' + '途中')
             return (1, '途中')
-
-        if '派件' in content:
-            log.debug('歧义=>' + content + '=>' + '派件')
-            return (1, '派件')
-
 
         log.debug('歧义=>分析失败=>' + content + '=>' + ','.join(result))
         return (2, result, content)
     if situation == 0:
-
-        if '快件异常' in content:
-            log.debug('歧义=>' + content + '=>' + '问题件')
-            return (1, '问题件')
-
-
         log.debug('失败=>' + content)
         return (0, content)
 
 
-def manual_check_judge_phase(type):
-    """
-    手动更新状态
-    :param type:全部更新或只更新未知部分
-    :return:
-    """
+class Express_by_MS:
 
-    db = model.Express_by_MS()
+    def __init__(self):
+        self.conn = pymssql.connect(server=DB_token['MSSQL']['MS_server'], port=DB_token['MSSQL']['MS_port'],
+                                    user=DB_token['MSSQL']['MS_user'], password=DB_token['MSSQL']['MS_password'],
+                                    database=DB_token['MSSQL']['MS_database'], charset='UTF-8')
+
+    def test(self):
+        cursor = self.conn.cursor()
+
+        sql = "SELECT id,Trace_Context FROM express_info where Trace_Phase='未知'"
+
+        cursor.execute(sql)
+        rows = cursor.fetchall()
+        self.conn.close()
+        return rows
+
+    def r(self, NEW, ID):
+        cursor = self.conn.cursor()
+        sql = "UPDATE  express_info SET Trace_Phase = '{}' WHERE ID = '{}'".format(NEW, ID)
+
+        cursor.execute(sql)
+        self.conn.commit()
+        self.conn.close()
+
+
+def save(i):
+    new_content = judge_phase(i[1])
+    db = Express_by_MS()
+    if new_content[0] == 1:
+        db.r(new_content[1], i[0])
+    if new_content[0] == 2:
+        db.r(','.join(new_content[1]), i[0])
+    if new_content[0] == 0:
+        db.r('未知', i[0])
+
+
+if __name__ == '__main__':
+
+    db = Express_by_MS()
+    rows = db.test()
+
+    p = []
+    my_thread = []
+
+    for i in rows:
+        p.append(i)
+
+
+    for i in range(len(p)):
+        t = threading.Thread(target=save, args=(p[i],))
+        my_thread.append(t)
+
+
+
+    for i in range(len(p)):
+        my_thread[i].start()
+
+
+    for i in range(len(p)):
+        my_thread[i].join()
+

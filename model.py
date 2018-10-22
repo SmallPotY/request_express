@@ -16,6 +16,9 @@ class Express_by_Tiantu:
 
     def push_update(self, item):
         # print(item)
+
+
+
         cursor = self.conn.cursor()
         sql = "INSERT INTO Express_Trace_Temp (Express_No,Express_Company,Express_Status,Has_Signed,Trace_Context,Trace_Date_Time,Process_Status) VALUES {}".format(
             item)
@@ -106,10 +109,10 @@ class Express_by_MS:
 
         cursor = self.conn.cursor()
 
-        Process_Status = item.get('Process_Status',-1)  # 查询标识
-        Express_Status = item.get('Express_Status',-1)  # 快递状态
-        Has_Signed = item.get('Has_Signed',-1)  # 是否签收
-        update_time = item.get('update_time','1999-01-01 0:00:00')  # 更新时间
+        Process_Status = item.get('Process_Status')  # 查询标识
+        Express_Status = item.get('Express_Status')  # 快递状态
+        Has_Signed = item.get('Has_Signed')  # 是否签收
+        update_time = item.get('update_time')  # 更新时间
         request_flag = item.get('request_flag')  # 请求结果
         latest_content = item.get('latest_content')  # 最后状态
         latest_tiem = item.get('latest_tiem','1999-01-01 0:00:00')  # 最后时间
@@ -176,6 +179,17 @@ class Express_by_MS:
         self.conn.commit()
         self.conn.close()
         return result
+
+
+
+    def repeat(self):
+        """把不是签收与退回状态的快递重新放回查询池"""
+        cursor = self.conn.cursor()
+        sql = "UPDATE express_temp SET	Process_Status=0 WHERE Express_No NOT in (SELECT Express_No FROM express WHERE Express_Status='3' or Express_Status='6')"
+
+        cursor.execute(sql)
+        self.conn.commit()
+        self.conn.close()
 
 
 if __name__ == '__main__':

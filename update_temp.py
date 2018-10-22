@@ -21,10 +21,12 @@ def push():
     db = model.Express_by_MS()
     item = db.get_push()
 
-    tiantu = model.Express_by_Tiantu()
-    tiantu.push_update(item)
-    print(datetime.datetime.now(),'推送单号信息')
-
+    if item:
+        tiantu = model.Express_by_Tiantu()
+        tiantu.push_update(item)
+        print(datetime.datetime.now(),'推送单号信息')
+    else:
+        print("暂无需要推送的数据")
 
 
 #

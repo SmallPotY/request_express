@@ -77,10 +77,16 @@ def main(i):
     targets = get_target(i)  # 获取i个单号
 
     if not targets:
-        log.critical('已无信息需要爬取,循环终止')
+        log.critical('已无信息需要爬取,重新推送未签收数据')
+
+        db = model.Express_by_MS()
+        db.repeat()
+
         global switch
         switch = False
 
+
+    switch = True
     for i in targets:
         item = parsing(api, i, proxies)
 

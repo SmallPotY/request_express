@@ -18,7 +18,9 @@ log = MyLog()
 
 
 
-api_list = [api_choose.baidu, api_choose.kuaidi100,api_choose.ckd8]
+api_list = [api_choose.baidu, api_choose.kuaidi100,api_choose.showapi]
+# api_list = [api_choose.baidu, api_choose.kuaidi100,api_choose.ckd8]
+# api_list = [api_choose.showapi]
 
 get_temp = 100  # 每次从临时表提取记录数
 
@@ -94,7 +96,7 @@ def main(i):
         db.save_result(item)
 
         log.info('通过【' + api.__name__ + '】抓取单号完成=>' + str(i[0]))
-        time.sleep(1)
+        # time.sleep(1)
 
 
 if __name__ == '__main__':
@@ -112,8 +114,8 @@ if __name__ == '__main__':
 
         my_thread = []
 
-        thread_count =4  # 调用 thread_count 个线程
-        parse = 10  # 一个线程解析 parse 个url
+        thread_count = 10  # 调用 thread_count 个线程
+        parse = 5  # 一个线程解析 parse 个url
 
         for i in range(thread_count):
             t = threading.Thread(target=main, args=(parse,))
@@ -121,15 +123,15 @@ if __name__ == '__main__':
 
         for i in range(thread_count):
             my_thread[i].start()
-            time.sleep(1)
+            # time.sleep(1)
 
         for i in range(thread_count):
             my_thread[i].join()
-            time.sleep(1)
+            # time.sleep(1)
 
-        time.sleep(3)
+        time.sleep(1)
 
         update_temp.update(get_temp)
         update_temp.push()
 
-        time.sleep(3)
+        time.sleep(1)

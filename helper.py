@@ -26,7 +26,6 @@ def judge_phase(content):
         '【分发】扫描': '途中',
         '快件扫描': '途中',
         '已拆包': '途中',
-        '已收寄': '途中',
         '签收': '签收',
         '代收': '签收',
         '为您服务': '签收',
@@ -40,6 +39,8 @@ def judge_phase(content):
         '开始配送': '派件',
         '等待配送': '途中',
         '正在投递':'派件',
+        '已收寄':'揽收',
+        '接收':'途中',
     }
 
     for k, v in key_state.items():
@@ -90,7 +91,7 @@ def judge_phase(content):
 
 
         log.debug('歧义=>分析失败=>' + content + '=>' + ','.join(result))
-        return (2, result, content)
+        return (1, guess[0])
     if situation == 0:
 
         if '快件异常' in content:

@@ -4,6 +4,7 @@ import time
 import requests
 import json
 import model
+from ShowapiRequest import ShowapiRequest
 
 
 def baidu(target, proxies):
@@ -26,20 +27,8 @@ def baidu(target, proxies):
         resp = requests.get(url=url, headers=headers, proxies=proxies)
 
     result = json.loads(eval("u'%s'" % resp.text))
-    item = {}
-    if result['status'] == '-5':
-        item['Express_Status'] = 0
-        item['results'] = '单号暂无物流进展'
-        item['Express_No'] = target[0]
-        item['Process_Status'] = 1
-        return item
+    item = {'request_flag':'no'}
 
-    if result['status'] == '-2':
-        item['Express_Status'] = 0
-        item['results'] = '单号错误'
-        item['Express_No'] = target[0]
-        item['Process_Status'] = 1
-        return item
 
     if result['status'] == '0':
 
@@ -86,7 +75,7 @@ def kuaidi100(target, proxies):
     else:
         resp = requests.get(url=url, proxies=proxies)
 
-    item = {}
+    item = {'request_flag': 'no'}
 
     if resp.status_code == 200:
         result = json.loads(resp.text)
@@ -108,12 +97,6 @@ def kuaidi100(target, proxies):
                 item['Has_Signed'] = 1
                 item['Process_Status'] = 2
 
-
-        elif item['request_flag'] == '快递公司参数异常：单号不存在或者已经过期':
-            item['Express_Status'] = result['state']
-            item['results'] = '快递公司参数异常：单号不存在或者已经过期'
-            item['Express_No'] = target[0]
-            item['Process_Status'] = 1
 
     return item
 
@@ -138,7 +121,7 @@ def ckd8(target, proxies):
 
     }
 
-    item = {}
+    item = {'request_flag': 'no'}
     if proxies == 0:
         resp = requests.post(url=url, data=data, headers=headers)
     else:
@@ -146,19 +129,6 @@ def ckd8(target, proxies):
 
     if resp.status_code == 200:
         result = json.loads(resp.text)
-        if result['status'] == '4':
-            item['Express_Status'] = 0
-            item['results'] = '输入的单号正确'
-            item['Express_No'] = target[0]
-            item['Process_Status'] = 1
-            return item
-
-        if result['status'] == '0':
-            item['Express_Status'] = 0
-            item['results'] = '暂无跟踪信息'
-            item['Express_No'] = target[0]
-            item['Process_Status'] = 1
-            return item
 
         if result['status'] == '1':
 
@@ -192,6 +162,65 @@ def ckd8(target, proxies):
     return item
 
 
+def showapi(target, proxies):
+    """ target[1] 快递公司, target[0] 快递单号"""
+    # 天图
+    app_id = "77783"
+    appSecret = "1a92f8350fe44087a19a8ebab258fbaa"
+
+    com = target[1]
+    nu = target[0]
+
+    if com == 'jd':
+        com = 'jingdong'
+
+    r = ShowapiRequest("http://route.showapi.com/64-19", app_id, appSecret)
+    r.addBodyPara("com", com)
+    r.addBodyPara("nu", nu)
+    # r.addFilePara("img", r"C:\Users\showa\Desktop\使用过的\4.png") #文件上传时设置
+    res = r.post()
+    # print(res.text)  # 返回信息
+    res = json.loads(res.text)['showapi_res_body']
+
+    # print(res)
+
+    showapi_status = {
+        '4': 3,
+        '2': 1,
+        '6': 2,
+        '5': 4,
+        '3': 5,
+        '10': 6,
+    }
+
+    item = {'request_flag': 'no'}
+
+    if res['msg'] =='查询成功':
+
+        item['Express_Status'] = showapi_status.get(res['status'], 0)
+        item['Has_Signed'] = 0
+        item['Synchronous'] = 1
+        item['Process_Status'] = 1
+
+        if item['Express_Status'] == 4:
+            item['Has_Signed'] = 1
+            item['Process_Status'] = 2
+
+        item['content'] = res.get('data')[::-1]
+        item['latest_content'] = res.get('data', [{"time": "Null", "context": ""}])[0]['context']
+        item['latest_tiem'] = res.get('data', [{"time": "Null", "context": ""}])[0]['time']
+
+        item['Express_No'] = nu
+        item['Express_Company'] = com
+        item['request_flag'] = 'ok'
+        item['update_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        item['content'] = res.get('data', '')[::-1]
+
+    return item
+
+
 if __name__ == '__main__':
     n = ckd8(('3102043855170', 'yunda'), 0)
     print(n)
+    # i = showapi(('3102043855170', 'yunda'))
+    # print(i)

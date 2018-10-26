@@ -17,10 +17,8 @@ class Express_by_Tiantu:
     def push_update(self, item):
         # print(item)
 
-
-
         cursor = self.conn.cursor()
-        sql = "INSERT INTO Express_Trace_Temp (Express_No,Express_Company,Express_Status,Has_Signed,Trace_Context,Trace_Date_Time,Process_Status) VALUES {}".format(
+        sql = "INSERT INTO Express_Trace_Temp (Express_No,Express_Company,Express_Status,Has_Signed,Trace_Context,Trace_Date_Time,Process_Status,Trace_phase) VALUES {}".format(
             item)
         # print(sql)
         try:
@@ -115,7 +113,7 @@ class Express_by_MS:
         update_time = item.get('update_time')  # 更新时间
         request_flag = item.get('request_flag')  # 请求结果
         latest_content = item.get('latest_content')  # 最后状态
-        latest_tiem = item.get('latest_tiem','1999-01-01 0:00:00')  # 最后时间
+        latest_tiem = item.get('latest_tiem')  # 最后时间
         Express_No = item.get('Express_No')  # 单号
 
         sql = """
@@ -165,14 +163,14 @@ class Express_by_MS:
     def get_push(self):
         cursor = self.conn.cursor()
         sql = """
-                SELECT i.Express_No,e.Express_Company,e.Express_Status,e.Has_Signed,i.Trace_Context,i.Trace_Date_Time FROM express_info i
+                SELECT i.Express_No,e.Express_Company,e.Express_Status,e.Has_Signed,i.Trace_Context,i.Trace_Date_Time,i.Trace_phase FROM express_info i
                 left  JOIN  express e ON i.Express_No=e.Express_No
                 WHERE i.Synchronous=1
                 UPDATE express_info SET Synchronous=0
                 """
         cursor.execute(sql)
         rows = cursor.fetchall()
-        result = [str((i[0], i[1], i[2], i[3], i[4], i[5].strftime('%Y-%m-%d %H:%M:%S'), '0')) for i in rows]
+        result = [str((i[0], i[1], i[2], i[3], i[4], i[5].strftime('%Y-%m-%d %H:%M:%S'), '0',i[6])) for i in rows]
         # print(result)
         result = ','.join([str(i) for i in result])
 

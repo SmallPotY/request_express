@@ -1,9 +1,13 @@
 # coding=utf-8
-import pymssql
 import datetime
-from config import DB_token
+import json
 import helper
-from main import log
+import pymssql
+from config import DB_token
+from  main import log
+# from log import logging as log
+import sys
+import os
 
 
 
@@ -75,7 +79,7 @@ class Express_by_MS:
 
     def get_unfinished_random(self, q):
         cursor = self.conn.cursor()
-        sql = "SELECT top {} * FROM express WHERE Process_Status=0 AND query_ongoing=0  ORDER BY newid()".format(q)
+        sql = "SELECT top {} * FROM express WHERE Process_Status=0 AND query_ongoing=0 AND  query_disably<>1 ORDER BY newid()".format(q)
         cursor.execute(sql)
         rows = cursor.fetchall()
         result = [i for i in rows]
@@ -97,44 +101,75 @@ class Express_by_MS:
         self.conn.commit()
         self.conn.close()
 
+
+
     def save_result(self, item):
         """
         更新查询信息
         :param item:
         :return:
         """
-        # print(item)
-
         cursor = self.conn.cursor()
 
-        Process_Status = item.get('Process_Status')  # 查询标识
-        Express_Status = item.get('Express_Status')  # 快递状态
-        Has_Signed = item.get('Has_Signed')  # 是否签收
-        update_time = item.get('update_time')  # 更新时间
         request_flag = item.get('request_flag')  # 请求结果
-        latest_content = item.get('latest_content')  # 最后状态
-        latest_tiem = item.get('latest_tiem')  # 最后时间
-        Express_No = item.get('Express_No')  # 单号
 
-        sql = """
-                UPDATE express SET Process_Status='{Process_Status}',Express_Status='{Express_Status}',
-                Has_Signed='{Has_Signed}',update_time='{update_time}',request_flag='{request_flag}',latest_content='{latest_content}',latest_tiem='{latest_tiem}'
-                WHERE Express_No='{Express_No}'
-        """.format(Process_Status=Process_Status, Express_Status=Express_Status, Has_Signed=Has_Signed,
-                   update_time=update_time, request_flag=request_flag, latest_content=latest_content,
-                   latest_tiem=latest_tiem, Express_No=Express_No)
+        if request_flag=='ok':
+            Process_Status = item.get('Process_Status')  # 查询标识
+            Express_Status = item.get('Express_Status')  # 快递状态
+            Has_Signed = item.get('Has_Signed')  # 是否签收
+            update_time = item.get('update_time')  # 更新时间
+            latest_content = item.get('latest_content')  # 最后状态
+            latest_tiem = item.get('latest_tiem')  # 最后时间
+            Express_No = item.get('Express_No')  # 单号
+            query_disably = item.get('query_disably',0) # 是否不用查询了
+        
+            sql = """UPDATE express SET Process_Status='{Process_Status}',Express_Status='{Express_Status}',query_disably='{query_disably}',err_count='0',
+                    Has_Signed='{Has_Signed}',update_time='{update_time}',request_flag='{request_flag}',latest_content='{latest_content}',latest_tiem='{latest_tiem}'
+                    WHERE Express_No='{Express_No}';
+                    UPDATE express_temp SET Process_Status=2 WHERE Express_No='{Express_No}'
+                    """.format(Process_Status=Process_Status, Express_Status=Express_Status, Has_Signed=Has_Signed,
+                    update_time=update_time, request_flag=request_flag, latest_content=latest_content,query_disably=query_disably,
+                    latest_tiem=latest_tiem, Express_No=Express_No)
 
-        # print(sql)
-        try:
+            try:
+                cursor.execute(sql)
+                self.conn.commit()
+            except:
+                log.error('执行save_result错误,代号[001],传入item：' + str(item) + '[SQL]:'+sql)
+            finally:
+                pass             
+
+        else:
+            Express_No = item.get('Express_No')  # 单号
+            sql ="select err_count,Note from express where Express_No='{}'".format(Express_No)
             cursor.execute(sql)
-        except:
-            log.error('执行SQL错误,代号[001],传入item：' + str(item) + '[SQL]:'+sql)
+            row = cursor.fetchone()
+            request_flag = item.get('request_flag')
+            err_count = row[0] if row[0] else 0
+            note = json.loads(row[1])  if row[1] else {}
+            err_count += 1
+            print(item)
+            print(note)
+            if item['err_info'] in note:
+                note[item['err_info'] ] = note[item['err_info'] ] + 1
+            else:
+                note[item['err_info'] ] = 1
 
-        sql = "UPDATE express_temp SET Process_Status=2 WHERE Express_No='{}'".format(Express_No)
-        try:
-            cursor.execute(sql)
-        except:
-            log.error('执行SQL错误,代号[002],传入item：' + str(item))
+            note_content = json.dumps(note, ensure_ascii=False)
+
+            sql = """UPDATE express SET err_count='{err_count}',request_flag='{request_flag}',note='{note}' 
+                    WHERE Express_No='{Express_No}'
+                 """.format(err_count=err_count,request_flag=request_flag,note=note_content,Express_No=Express_No)
+            try:
+                cursor.execute(sql)
+                self.conn.commit()
+            except:
+                log.error('执行save_result错误,代号[002],传入item：' + str(item) + '[SQL]:'+sql)
+            finally:
+                pass   
+
+
+
 
         if item.get('content'):
             for i in range(len(item.get('content'))):
@@ -149,7 +184,7 @@ class Express_by_MS:
                         if t[0] ==1 :
                             phase = t[1]
                         else:
-                            phase = '，'.join(t[1])
+                            phase = ','.join(t[1])
                     sql = "INSERT INTO express_info (Express_No, Trace_Context,Trace_Date_Time,Trace_flag,Trace_serial,Trace_Phase) VALUES ('{}','{}','{}','{}','{}','{}')".format(
                         Express_No, item['content'][i]['context'], item['content'][i]['time'], trace_flag, i,phase)
                     try:
@@ -183,7 +218,7 @@ class Express_by_MS:
     def repeat(self):
         """把不是签收与退回状态的快递重新放回查询池"""
         cursor = self.conn.cursor()
-        sql = "UPDATE express_temp SET	Process_Status=0 WHERE Express_No NOT in (SELECT Express_No FROM express WHERE Express_Status='3' or Express_Status='6')"
+        sql = "UPDATE express_temp SET Process_Status=0 WHERE Express_No NOT in (SELECT Express_No FROM express WHERE Express_Status='3' or Express_Status='6')"
 
         cursor.execute(sql)
         self.conn.commit()
@@ -191,6 +226,11 @@ class Express_by_MS:
 
 
 if __name__ == '__main__':
-    db = Express_by_MS()
+    # db = Express_by_MS()
+    item = {'request_flag':'no','Express_No':'816910663902','err_info':'参数错误'}
+    n = json.dumps(item, ensure_ascii=False)
+    print(n)
 
-    db.conn.commit()
+
+
+    # db.save_result(item)

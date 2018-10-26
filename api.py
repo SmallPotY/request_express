@@ -27,7 +27,7 @@ def baidu(target, proxies):
         resp = requests.get(url=url, headers=headers, proxies=proxies)
 
     result = json.loads(eval("u'%s'" % resp.text))
-    item = {'request_flag':'no'}
+    item = {'request_flag':'no','Express_No':target[0],'err_info':result.get('msg','')}
 
 
     if result['status'] == '0':
@@ -58,6 +58,7 @@ def baidu(target, proxies):
         if item['Express_Status'] == '3':
             item['Has_Signed'] = 1
             item['Process_Status'] = 2
+            item['query_disably'] = 1
 
     return item
 
@@ -75,11 +76,12 @@ def kuaidi100(target, proxies):
     else:
         resp = requests.get(url=url, proxies=proxies)
 
-    item = {'request_flag': 'no'}
+    result = json.loads(resp.text)
+
+    item = {"request_flag":"no","Express_No":target[0],"err_info":result.get('message','')}
 
     if resp.status_code == 200:
-        result = json.loads(resp.text)
-
+        
         item['request_flag'] = result['message']
         item['update_time'] = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         item['Has_Signed'] = 0
@@ -96,6 +98,7 @@ def kuaidi100(target, proxies):
             if item['Express_Status'] == '3':
                 item['Has_Signed'] = 1
                 item['Process_Status'] = 2
+                item['query_disably'] = 1
 
 
     return item
@@ -121,15 +124,16 @@ def ckd8(target, proxies):
 
     }
 
-    item = {'request_flag': 'no'}
+    
     if proxies == 0:
         resp = requests.post(url=url, data=data, headers=headers)
     else:
         resp = requests.post(url=url, data=data, headers=headers, proxies=proxies)
-
+    
+    item = {'request_flag':'no','Express_No':target[0]}
     if resp.status_code == 200:
         result = json.loads(resp.text)
-
+        item['err_info'] = result.get('message','')
         if result['status'] == '1':
 
             item['request_flag'] = 'ok'
@@ -158,6 +162,7 @@ def ckd8(target, proxies):
             if item['Express_Status'] == '3':
                 item['Has_Signed'] = 1
                 item['Process_Status'] = 2
+                item['query_disably'] = 1
 
     return item
 
@@ -193,7 +198,7 @@ def showapi(target, proxies):
         '10': 6,
     }
 
-    item = {'request_flag': 'no'}
+    item = {'request_flag':'no','Express_No':target[0],'err_info': res['msg']}
 
     if res['msg'] =='查询成功':
 
@@ -202,9 +207,10 @@ def showapi(target, proxies):
         item['Synchronous'] = 1
         item['Process_Status'] = 1
 
-        if item['Express_Status'] == 4:
+        if item['Express_Status'] == 3:
             item['Has_Signed'] = 1
             item['Process_Status'] = 2
+            item['query_disably'] = 1
 
         item['content'] = res.get('data')[::-1]
         item['latest_content'] = res.get('data', [{"time": "Null", "context": ""}])[0]['context']

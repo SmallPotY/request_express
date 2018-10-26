@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
         my_thread = []
 
-        thread_count = 10  # 调用 thread_count 个线程
+        thread_count = 1  # 调用 thread_count 个线程
         parse = 5  # 一个线程解析 parse 个url
 
         for i in range(thread_count):

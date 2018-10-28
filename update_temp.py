@@ -21,6 +21,8 @@ def push():
     db = model.Express_by_MS()
     item = db.get_push()
 
+
+    print(item)
     if item:
         tiantu = model.Express_by_Tiantu()
         tiantu.push_update(item)
@@ -29,7 +31,9 @@ def push():
         print("暂无需要推送的数据")
 
 
-#
+
+
+push()
 # scheduler = BlockingScheduler()
 # scheduler.add_job(func=update, trigger='interval', seconds=60)
 # scheduler.add_job(func=push, trigger='interval', seconds=60)

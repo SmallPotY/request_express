@@ -51,7 +51,7 @@ def judge_phase(content):
     situation = len(result)
 
     if situation == 1:
-        log.debug('成功=>' + content + '=>' + guess[0])
+        # log.debug('成功=>' + content + '=>' + guess[0])
         return (1, guess[0])
 
     if situation > 1:
@@ -110,4 +110,4 @@ def manual_check_judge_phase(type):
     :return:
     """
 
-    db = model.Express_by_MS()
+    # db = model.Express_by_MS()

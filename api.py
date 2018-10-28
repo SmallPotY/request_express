@@ -201,8 +201,8 @@ def showapi(target, proxies):
     item = {'request_flag':'no','Express_No':target[0],'err_info': res['msg']}
 
     if res['msg'] =='查询成功':
-
-        item['Express_Status'] = showapi_status.get(res['status'], 0)
+        # print('res',res['status'])
+        item['Express_Status'] = showapi_status.get(str(res['status']), 0)
         item['Has_Signed'] = 0
         item['Synchronous'] = 1
         item['Process_Status'] = 1
@@ -226,7 +226,7 @@ def showapi(target, proxies):
 
 
 if __name__ == '__main__':
-    n = ckd8(('3102043855170', 'yunda'), 0)
+    n = showapi(('816196180328', 'yuantong'), 0)
     print(n)
     # i = showapi(('3102043855170', 'yunda'))
     # print(i)

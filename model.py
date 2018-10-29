@@ -1,6 +1,8 @@
 # coding=utf-8
 import datetime
 import json
+import time
+
 import helper
 import pymssql
 from config import DB_token
@@ -127,6 +129,7 @@ class Express_by_MS:
             latest_content = item.get('latest_content')  # 最后状态
             latest_tiem = item.get('latest_tiem')  # 最后时间
             Express_No = item.get('Express_No')  # 单号
+            Express_Company = item.get('Express_Company')
             # query_disably = item.get('query_disably',0) # 是否不用查询了
         
             sql = """UPDATE express SET Process_Status='{Process_Status}',Express_Status='{Express_Status}',err_count='0',
@@ -179,16 +182,24 @@ class Express_by_MS:
 
 
 
-
         if item.get('content'):
             for i in range(len(item.get('content'))):
-                trace_flag = Express_No + "-[" + str(i) + "]"
+
+                time_str = time.strptime(item['content'][i]['time'], '%Y-%m-%d %H:%M:%S')
+                ss = str(int(time.mktime(time_str)))
+                ct = Express_No + "-" + ss
+                res= None
+                trace_flag = ct
                 sql = "select Trace_flag from express_info WHERE Trace_flag='{}'".format(trace_flag)
-                cursor.execute(sql)
-                res = cursor.fetchone()
+                try:
+                    cursor.execute(sql)
+                    res = cursor.fetchone()
+                except:
+                    log.error('执行SQL错误,代号[002]：' + str(sql))
+
                 if not res:
                     phase = '未知'
-                    t = helper.judge_phase(item['content'][i]['context'])
+                    t = helper.judge_phase(item['content'][i]['context'],Express_Company)
                     if t[0]:
                         if t[0] ==1 :
                             phase = t[1]

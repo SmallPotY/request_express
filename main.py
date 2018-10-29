@@ -96,7 +96,7 @@ def main(i):
         db.save_result(item)
 
         log.info('通过【' + api.__name__ + '】抓取单号完成=>' + str(i[0]))
-        # time.sleep(1)
+        time.sleep(1)
 
 
 if __name__ == '__main__':
@@ -114,7 +114,7 @@ if __name__ == '__main__':
 
         my_thread = []
 
-        thread_count = 5  # 调用 thread_count 个线程
+        thread_count = 6  # 调用 thread_count 个线程
         parse = 5  # 一个线程解析 parse 个url
 
         for i in range(thread_count):
@@ -123,11 +123,11 @@ if __name__ == '__main__':
 
         for i in range(thread_count):
             my_thread[i].start()
-            # time.sleep(1)
+            time.sleep(1)
 
         for i in range(thread_count):
             my_thread[i].join()
-            # time.sleep(1)
+            time.sleep(1)
 
         time.sleep(1)
 

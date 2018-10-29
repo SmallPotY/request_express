@@ -27,7 +27,7 @@ def baidu(target, proxies):
         resp = requests.get(url=url, headers=headers, proxies=proxies)
 
     result = json.loads(eval("u'%s'" % resp.text))
-    item = {'request_flag':'no','Express_No':target[0],'err_info':result.get('msg','')}
+    item = {'request_flag':'no','Express_No':target[0],'Express_Company':target[1],'err_info':result.get('msg','')}
 
 
     if result['status'] == '0':
@@ -78,7 +78,8 @@ def kuaidi100(target, proxies):
 
     result = json.loads(resp.text)
 
-    item = {"request_flag":"no","Express_No":target[0],"err_info":result.get('message','')}
+    item = {"request_flag":"no","Express_No":target[0],'Express_Company':target[1],"err_info":result.get('message','')}
+
 
     if resp.status_code == 200:
         
@@ -129,8 +130,8 @@ def ckd8(target, proxies):
         resp = requests.post(url=url, data=data, headers=headers)
     else:
         resp = requests.post(url=url, data=data, headers=headers, proxies=proxies)
-    
-    item = {'request_flag':'no','Express_No':target[0]}
+
+    item = {'request_flag':'no','Express_No':target[0],'Express_Company':target[1]}
     if resp.status_code == 200:
         result = json.loads(resp.text)
         item['err_info'] = result.get('message','')
@@ -198,7 +199,7 @@ def showapi(target, proxies):
         '10': 6,
     }
 
-    item = {'request_flag':'no','Express_No':target[0],'err_info': res['msg']}
+    item = {'request_flag':'no','Express_No':target[0],'err_info': res['msg'],'Express_Company':target[1]}
 
     if res['msg'] =='查询成功':
         # print('res',res['status'])

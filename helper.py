@@ -3,45 +3,50 @@
 
 from main import log
 import model
+from config import key_state as default_key
 
-
-def judge_phase(content):
+def judge_phase(content,Express_Company):
     guess = []
 
-    key_state = {
-        '打包': '途中',
-        '发出': '途中',
-        '收入': '途中',
-        '发往': '途中',
-        '到达': '途中',
-        '到件扫描': '途中',
-        '称重扫描': '途中',
-        '进行分拨': '途中',
-        '【反馈】扫描': '途中',
-        '离开': '途中',
-        '卸车扫描': '途中',
-        '【称重】扫描': '途中',
-        '【到件】扫描': '途中',
-        '【卸车】扫描': '途中',
-        '【分发】扫描': '途中',
-        '快件扫描': '途中',
-        '已拆包': '途中',
-        '签收': '签收',
-        '代收': '签收',
-        '为您服务': '签收',
-        '派件': '派件',
-        '【派送】扫描': '派件',
-        '收件': '揽收',
-        '揽收': '揽收',
-        '揽件': '揽收',
-        '揽件扫描': '揽收',
-        '问题件': '问题件',
-        '开始配送': '派件',
-        '等待配送': '途中',
-        '正在投递':'派件',
-        '已收寄':'揽收',
-        '接收':'途中',
-    }
+
+    if default_key.get(Express_Company):
+        key_state = default_key.get(Express_Company)
+        # print(key_state,Express_Company)
+    else:
+        key_state = {
+            '打包': '途中',
+            '发出': '途中',
+            '收入': '途中',
+            '发往': '途中',
+            '到达': '途中',
+            '到件扫描': '揽件',   # 韵达
+            '称重扫描': '途中',
+            '进行分拨': '途中',
+            '【反馈】扫描': '途中',
+            '离开': '途中',
+            '卸车扫描': '途中',
+            '【称重】扫描': '途中',
+            '【到件】扫描': '途中',
+            '【卸车】扫描': '途中',
+            '【分发】扫描': '途中',
+            '快件扫描': '途中',
+            '已拆包': '途中',
+            '签收': '签收',
+            '代收': '签收',
+            '为您服务': '签收',
+            '派件': '派件',
+            '【派送】扫描': '派件',
+            '收件': '揽收',
+            '揽收': '揽收',
+            '揽件': '揽收',
+            '揽件扫描': '揽收',
+            '问题件': '异常',
+            '开始配送': '派件',
+            '等待配送': '途中',
+            '正在投递':'派件',
+            '已收寄':'揽收',
+            '接收':'途中',
+        }
 
     for k, v in key_state.items():
         if k in content:
@@ -57,8 +62,7 @@ def judge_phase(content):
     if situation > 1:
         if '问题件' in guess:
             log.debug('歧义=>' + content + '=>' + '问题件')
-            return (1, '问题件')
-
+            return (1, '异常')
         if '已揽件' in content or '已揽收' in content:
             log.debug('歧义=>' + content + '=>' + '揽收')
             return (1, '揽收')
@@ -91,6 +95,12 @@ def judge_phase(content):
 
 
         log.debug('歧义=>分析失败=>' + content + '=>' + ','.join(result))
+
+
+        key_sort = ['签收','揽收','派件','异常','途中']
+        for i in key_sort:
+            if i in guess:
+                return (1, i)
         return (1, guess[0])
     if situation == 0:
 
@@ -109,5 +119,5 @@ def manual_check_judge_phase(type):
     :param type:全部更新或只更新未知部分
     :return:
     """
-
+    pass
     # db = model.Express_by_MS()

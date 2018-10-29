@@ -22,7 +22,7 @@ def push():
     item = db.get_push()
 
 
-    print(item)
+    # print(item)
     if item:
         tiantu = model.Express_by_Tiantu()
         tiantu.push_update(item)
@@ -33,7 +33,6 @@ def push():
 
 
 
-push()
 # scheduler = BlockingScheduler()
 # scheduler.add_job(func=update, trigger='interval', seconds=60)
 # scheduler.add_job(func=push, trigger='interval', seconds=60)

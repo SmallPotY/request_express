@@ -80,10 +80,10 @@ def main(i):
 
     if not targets:
         log.critical('已无信息需要爬取,重新推送未签收数据')
-
+        
         db = model.Express_by_MS()
         db.repeat()
-
+        time.sleep(5)
         global switch
         switch = False
 
@@ -114,8 +114,8 @@ if __name__ == '__main__':
 
         my_thread = []
 
-        thread_count = 6  # 调用 thread_count 个线程
-        parse = 5  # 一个线程解析 parse 个url
+        thread_count = 4  # 调用 thread_count 个线程
+        parse = 15  # 一个线程解析 parse 个url
 
         for i in range(thread_count):
             t = threading.Thread(target=main, args=(parse,))
@@ -129,9 +129,9 @@ if __name__ == '__main__':
             my_thread[i].join()
             time.sleep(1)
 
-        time.sleep(1)
+        time.sleep(2)
 
         update_temp.update(get_temp)
         update_temp.push()
 
-        time.sleep(1)
+        time.sleep(2)

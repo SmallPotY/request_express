@@ -2,14 +2,11 @@
 import datetime
 import json
 import time
-
 import helper
 import pymssql
-from config import DB_token, query_interval
+from config import DB_token
+import config
 from main import log
-# from log import logging as log
-import sys
-import os
 
 
 class Express_by_Tiantu:
@@ -29,7 +26,7 @@ class Express_by_Tiantu:
         try:
             cursor.execute(sql)
         except:
-            log.error('执行SQL错误,代号[push_update_001],错误语句：' + str(sql))
+            log.error('执行推送错误,代号[push_update_001],错误语句：' + str(sql))
         self.conn.commit()
         self.conn.close()
 
@@ -84,7 +81,7 @@ class Express_by_MS:
 
     def get_unfinished_random(self, q):
         cursor = self.conn.cursor()
-        sql = "SELECT top {} * FROM express WHERE Process_Status=0 AND query_ongoing=0 AND  query_disably<>1 ORDER BY newid()".format(
+        sql = "SELECT TOP {} * FROM express WHERE Process_Status=0 AND query_ongoing=0 AND  query_disably<>1  ORDER BY query_priority DESC ,newid()".format(
             q)
         cursor.execute(sql)
 
@@ -115,6 +112,10 @@ class Express_by_MS:
         :return:
         """
         # print(item)
+        if item.get('failure'):
+            print('{}查询失败，单号：{}'.format(item['failure'], item['Express_No']))
+            return
+
         cursor = self.conn.cursor()
 
         request_flag = item.get('request_flag')  # 请求结果
@@ -169,8 +170,9 @@ class Express_by_MS:
             note_content = json.dumps(note, ensure_ascii=False)
 
             sql = """UPDATE express SET Process_Status='1',update_time='{update_time}', err_count='{err_count}',request_flag='{request_flag}',query_disably='{query_disably}',note='{note}' 
-                    WHERE Express_No='{Express_No}'
-                 """.format(update_time=update_time,err_count=err_count, request_flag=request_flag, note=note_content,
+                    WHERE Express_No='{Express_No}';
+                    UPDATE express_temp SET Process_Status=2 WHERE Express_No='{Express_No}'
+                 """.format(update_time=update_time, err_count=err_count, request_flag=request_flag, note=note_content,
                             query_disably=query_disably, Express_No=Express_No)
             try:
                 cursor.execute(sql)
@@ -233,12 +235,57 @@ class Express_by_MS:
 
     def repeat(self):
         """把不是签收与退回状态的快递重新放回查询池"""
+        # print('query_interval',config.query_interval)
         cursor = self.conn.cursor()
-        sql = "UPDATE express_temp SET Process_Status=0 WHERE Express_No in (SELECT top 1000 Express_No FROM express WHERE Express_Status<>'3' AND Express_Status<>'6' AND query_disably<>'1' AND DateDiff(hh,update_time,getDate())>{query_interval} ORDER BY newid())".format(
-            query_interval=query_interval)
+        sql = "UPDATE express SET Process_Status=0 WHERE Express_No IN  (SELECT top 1000 Express_No FROM express WHERE Express_Status<>'3' AND Express_Status<>'6' AND query_disably<>'1' AND DateDiff(hh,update_time,getDate())>={query_interval} ORDER BY newid())".format(
+            query_interval=config.query_interval)
         cursor.execute(sql)
         self.conn.commit()
         self.conn.close()
+
+    def repeat_rootless(self):
+        """
+        把 x 小时之前查不到揽收状态的单重新查询
+        :return:
+        """
+        # print('query_first_interval',config.query_first_interval)
+        cursor = self.conn.cursor()
+
+        sql = "UPDATE express SET Process_Status=0 WHERE Express_No IN (SELECT Express_No from express WHERE latest_content IS NULL AND  DateDiff(hh,update_time,getDate())>={query_interval})".format(
+            query_interval=config.query_first_interval)
+        cursor.execute(sql)
+        self.conn.commit()
+        self.conn.close()
+
+
+    def repeat_err(self):
+        """
+        把 x 小时之前查询失败的单查询查询
+        :return:
+        """
+        cursor = self.conn.cursor()
+
+        sql = "UPDATE express SET Process_Status=0 WHERE Express_No IN (SELECT Express_No from express WHERE latest_content IS NULL AND  DateDiff(hh,update_time,getDate())>={query_err_interval})".format(
+            query_err_interval=config.query_err_interval)
+        cursor.execute(sql)
+        self.conn.commit()
+        self.conn.close()
+
+
+    def loading_config(self):
+        cursor = self.conn.cursor()
+        sql = "SELECT * FROM parameter"
+        cursor.execute(sql)
+        row = cursor.fetchone()
+        result = {
+            'query_interval': row[1],           # 快递单号查询间隔 {query_interval} 小时
+            'query_first_interval': row[2],     # 获取第一次查询的更新间隔
+            'query_err_interval': row[5],       # 查询失败的更新间隔
+            'thread_nbmber': row[3],            # 调用线程数
+            'parse_nbmber': row[4],             # 一个线程解析 parse 个url
+        }
+        self.conn.close()
+        return result
 
 
 if __name__ == '__main__':

@@ -17,10 +17,9 @@ switch = True
 log = MyLog()
 
 
+api_free = [api_choose.baidu, api_choose.kuaidi100, api_choose.ckd8]
+api_pay = [api_choose.showapi]
 
-api_list = [api_choose.baidu, api_choose.kuaidi100,api_choose.showapi]
-# api_list = [api_choose.baidu, api_choose.kuaidi100,api_choose.ckd8]
-# api_list = [api_choose.showapi]
 
 get_temp = 100  # 每次从临时表提取记录数
 
@@ -49,13 +48,13 @@ def get_proxies():
 def get_target(q):
     """
     :param q: 获取的记录数
-    :return: 随机获取 q 条快递记录，[('#快递单号','#快递公司'),('#快递单号','#快递公司')]
+    :return: 随机获取 q 条快递记录，[('#快递单号','#快递公司','#最近一次查询状态'),('#快递单号','#快递公司','#最近一次查询状态')]
     """
     db = model.Express_by_MS()
     item = db.get_unfinished_random(q)
     targets = []
     for i in item:
-        targets.append((i[1], i[2]))
+        targets.append((i[1], i[2], i[7]))
     return targets
 
 
@@ -74,24 +73,35 @@ def parsing(api, target, proxies):
 
 def main(i):
     proxies = get_proxies()
-    # proxies = 0
-    api = random.choice(api_list)
     targets = get_target(i)  # 获取i个单号
 
     if not targets:
         log.critical('已无信息需要爬取,重新推送未签收数据')
-        
+
         db = model.Express_by_MS()
         db.repeat()
         time.sleep(5)
         global switch
         switch = False
 
-
     switch = True
-    for i in targets:
-        item = parsing(api, i, proxies)
 
+    for i in targets:
+
+        if i[2]:
+            if i[2] == 'ok':
+                # 上一次查询失败调用付费接口
+                api = random.choice(api_free)
+            else:
+                api = random.choice(api_pay)
+
+        else:
+            # 第一次查询用免费接口
+            api = random.choice(api_free)
+
+
+
+        item = parsing(api, i, proxies)
         db = model.Express_by_MS()
         db.save_result(item)
 
@@ -101,21 +111,18 @@ def main(i):
 
 if __name__ == '__main__':
 
-    # c = 0
-
     update_temp.update(get_temp)
+
 
     while switch:
 
         db = model.Express_by_MS()
         db.init_get_unfinished_random()
 
-        # c += 1
-
         my_thread = []
 
-        thread_count = 4  # 调用 thread_count 个线程
-        parse = 15  # 一个线程解析 parse 个url
+        thread_count = config.thread_nbmber  # 调用 thread_count 个线程
+        parse = config.parse_nbmber  # 一个线程解析 parse 个url
 
         for i in range(thread_count):
             t = threading.Thread(target=main, args=(parse,))
@@ -133,5 +140,9 @@ if __name__ == '__main__':
 
         update_temp.update(get_temp)
         update_temp.push()
+        update_temp.update_rootless()
+        update_temp.update_rootless()
+        update_temp.update_config()
 
-        time.sleep(2)
+        print('.........')
+        time.sleep(4)

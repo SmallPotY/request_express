@@ -1,7 +1,12 @@
 # coding=utf-8
 
-# 每单查询间隔
-query_interval = 5
+
+query_interval = 4     # 快递单号查询间隔 {query_interval} 小时
+query_first_interval = 2    # 获取第一次查询的更新间隔
+query_err_interval = 2      # 查询失败的更新间隔
+thread_nbmber = 3      # 调用线程数
+parse_nbmber = 15      # 一个线程解析 parse 个url
+
 
 
 proxyHost = "http-pro.abuyun.com"
@@ -87,7 +92,7 @@ yuantong_key_state = {
     "滞留": "异常",
     "重新派送": "异常",
     "间接操作": "途中",
-    "转运": "途中 ",
+    "转运": "途中",
     "派送": "派件",
     "再投": "异常",
     "离开": "途中",
@@ -95,7 +100,7 @@ yuantong_key_state = {
 }
 
 yunda_key_state = {
-    "到件扫描": "途中",
+    "到件扫描": "揽收",
     "称重": "途中",
     "中转集包": "途中",
     "进入": "途中",
@@ -126,7 +131,6 @@ yunda_key_state = {
     "完成取件": "签收",
     "问题件": "异常",
     "节假日客户上班后派送": "异常",
-
 }
 
 youzhengguonei_key_state = {

@@ -19,7 +19,7 @@ def judge_phase(content,Express_Company):
             '收入': '途中',
             '发往': '途中',
             '到达': '途中',
-            '到件扫描': '揽件',   # 韵达
+            '到件扫描': '揽件',
             '称重扫描': '途中',
             '进行分拨': '途中',
             '【反馈】扫描': '途中',
@@ -96,7 +96,7 @@ def judge_phase(content,Express_Company):
 
         log.debug('歧义=>分析失败=>' + content + '=>' + ','.join(result))
 
-
+        # 关键字优先级
         key_sort = ['签收','揽收','派件','异常','途中']
         for i in key_sort:
             if i in guess:
@@ -105,8 +105,8 @@ def judge_phase(content,Express_Company):
     if situation == 0:
 
         if '快件异常' in content:
-            log.debug('歧义=>' + content + '=>' + '问题件')
-            return (1, '问题件')
+            log.debug('歧义=>' + content + '=>' + '异常')
+            return (1, '异常')
 
 
         log.debug('失败=>' + content)

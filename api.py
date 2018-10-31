@@ -3,7 +3,6 @@ import datetime
 import time
 import requests
 import json
-import model
 from ShowapiRequest import ShowapiRequest
 
 
@@ -26,7 +25,13 @@ def baidu(target, proxies):
     else:
         resp = requests.get(url=url, headers=headers, proxies=proxies)
 
-    result = json.loads(eval("u'%s'" % resp.text))
+
+    try:
+        result = json.loads(eval("u'%s'" % resp.text))
+    except:
+        print('解析失败，内容：',resp.text)
+        return {'failure':'baidu','Express_No':target[0]}
+
     item = {'request_flag': 'no', 'Express_No': target[0], 'Express_Company': target[1],
             'err_info': result.get('msg', '')}
 
@@ -76,7 +81,13 @@ def kuaidi100(target, proxies):
     else:
         resp = requests.get(url=url, proxies=proxies)
 
-    result = json.loads(resp.text)
+
+
+    try:
+        result = json.loads(resp.text)
+    except:
+        print('解析失败，内容：',resp.text)
+        return {'failure':'kuaidi100','Express_No':target[0]}
 
     item = {"request_flag": "no", "Express_No": target[0], 'Express_Company': target[1],
             "err_info": result.get('message', '')}
@@ -129,9 +140,16 @@ def ckd8(target, proxies):
     else:
         resp = requests.post(url=url, data=data, headers=headers, proxies=proxies)
 
-    item = {'request_flag': 'no', 'Express_No': target[0], 'Express_Company': target[1]}
+    item = {'failure':'ckd8','Express_No':target[0]}
+
     if resp.status_code == 200:
         result = json.loads(resp.text)
+
+        item = {"request_flag": "no", "Express_No": target[0], 'Express_Company': target[1],
+                "err_info": '查询失败'}
+
+
+        # print(result)
         item['err_info'] = result.get('message', '')
         if result['status'] == '1':
 
@@ -225,7 +243,6 @@ def showapi(target, proxies):
 
 
 if __name__ == '__main__':
-    n = showapi(('816196180328', 'yuantong'), 0)
+    n = ckd8(('3102061160623', 'yunda'), 0)
     print(n)
-    # i = showapi(('3102043855170', 'yunda'))
-    # print(i)
+

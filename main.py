@@ -22,7 +22,7 @@ api_pay = [api_choose.showapi]
 
 
 get_temp = 100  # 每次从临时表提取记录数
-
+L = threading.Lock()    # 引入锁
 
 def get_proxies():
     """
@@ -100,13 +100,16 @@ def main(i):
             api = random.choice(api_free)
 
 
+        L.acquire() # 加锁
 
         item = parsing(api, i, proxies)
         db = model.Express_by_MS()
         db.save_result(item)
-
         log.info('通过【' + api.__name__ + '】抓取单号完成=>' + str(i[0]))
-        time.sleep(1)
+
+        L.release() # 放锁
+
+
 
 
 if __name__ == '__main__':
